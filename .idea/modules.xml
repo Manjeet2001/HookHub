@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/webhook_delivery.iml" filepath="$PROJECT_DIR$/.idea/webhook_delivery.iml" />
+      <module fileurl="file://$PROJECT_DIR$/webhook_delivery/webhook_delivery.iml" filepath="$PROJECT_DIR$/webhook_delivery/webhook_delivery.iml" />
     </modules>
   </component>
 </project>
