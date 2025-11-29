@@ -113,17 +113,17 @@ Redis at localhost:6379
 Edit src/main/resources/application.properties if needed:
 ```bash
 # Spring Datasource
-spring.datasource.url=jdbc:postgresql://localhost:5432/webhook_db
-spring.datasource.username=user
-spring.datasource.password=password
+spring.datasource.url=jdbc:postgresql://localhost:5432/hookhub_db
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # Spring RabbitMQ
 spring.rabbitmq.host=localhost
 spring.rabbitmq.port=5672
-spring.rabbitmq.username=guest
-spring.rabbitmq.password=guest
+spring.rabbitmq.username=${RABBITMQ_USERNAME:guest}
+spring.rabbitmq.password=${RABBITMQ_PASSWORD:guest}
 spring.rabbitmq.virtual-host=/
 
 # Application-specific queue/exchange names
