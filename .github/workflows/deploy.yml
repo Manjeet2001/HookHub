@@ -21,6 +21,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
+          debug: true
           script: |
             # Navigate to project directory or clone if doesn't exist
             if [ ! -d "HookHub" ]; then
