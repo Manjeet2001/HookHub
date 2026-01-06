@@ -31,7 +31,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
-          key_path: ~/.ssh/ec2.pem
+          key_path: /github/home/.ssh/ec2.pem
           port: 22
           debug: true
           script_stop: true
