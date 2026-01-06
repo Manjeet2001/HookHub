@@ -13,6 +13,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Verify SSH key format
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | head -n 2
+          echo "----"
+          echo "${{ secrets.EC2_SSH_KEY }}" | tail -n 2
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
