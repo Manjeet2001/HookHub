@@ -63,9 +63,9 @@ It ensures reliable webhook delivery with automatic retries, exponential backoff
 
 ## ⚙️ Project Structure
 ```text
-webhook_delivery/
+HookHub/
 ├── .idea/
-├── target/
+├── README.md
 ├── webhook_delivery/
 │   ├── .mvn/
 │   ├── src/
@@ -81,8 +81,6 @@ webhook_delivery/
 │   │   │   │       ├── service/    # Business Logic (WebhookDeliveryWorker, WebhookIngestionService, SubscriptionService, signatureService, LogCleanupService)
 │   │   │   │       └── WebhookDeliveryApplication.java
 │   │   │   └── resources/
-│   │   │       ├── static/
-│   │   │       ├── templates/
 │   │   │       └── application.properties
 │   │   └── test/
 │   └── target/
