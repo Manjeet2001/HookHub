@@ -190,7 +190,7 @@ Response:
 
 ## 2️⃣ Send a Webhook Event
 
-### POST /api/webhooks/{subscriptionId}
+### POST /ingest/{subscriptionId}
 Body:
 ```json
 {
