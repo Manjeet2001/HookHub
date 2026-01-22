@@ -1,279 +1,540 @@
-# ⚡ HookHub – Reliable Webhook Delivery System
+# ⚡ HookHub - Complete Webhook Delivery System
 
-HookHub is a **production-grade webhook subscription and delivery system** built using **Spring Boot**, **RabbitMQ**, **PostgreSQL**, and **Redis**.  
-It ensures reliable webhook delivery with automatic retries, exponential backoff, persistent logging, and caching.
-
----
-
-## 🚀 Features
-
-✅ **Webhook ingestion** API for producers to queue webhook events  
-✅ **Subscription management** for clients (event type + target URL)  
-✅ **Asynchronous delivery** powered by RabbitMQ  
-✅ **Automatic retry mechanism** with delayed queues (10s → 30s → 1m → 5m → 15m)  
-✅ **Failure logging and persistence** via PostgreSQL  
-✅ **Redis caching** for subscription lookups  
-✅ **Docker support** for easy local deployment
+A **production-grade, full-stack webhook subscription and delivery platform** that combines a robust Spring Boot backend with a modern React frontend. HookHub ensures reliable webhook delivery with automatic retries, exponential backoff, persistent logging, and real-time monitoring.
 
 ---
 
-## 🧩 Architecture Overview
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [CI/CD](#cicd)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## 🌟 Overview
+
+HookHub is a complete webhook management solution consisting of:
+
+- **Backend (HookHub)**: Spring Boot application handling webhook ingestion, subscription management, and reliable delivery via RabbitMQ
+- **Frontend**: Modern React dashboard for managing subscriptions, sending webhooks, and monitoring delivery status
+
+Perfect for applications that need to:
+- Send webhooks to multiple subscribers
+- Ensure reliable delivery with retry mechanisms
+- Monitor webhook delivery status in real-time
+- Manage webhook subscriptions programmatically
+
+---
+
+## ✨ Features
+
+### Backend Features
+- ✅ **Webhook Ingestion API** - Queue webhook events for delivery
+- ✅ **Subscription Management** - Create, read, update, delete webhook subscriptions
+- ✅ **Asynchronous Delivery** - RabbitMQ-powered message queue
+- ✅ **Automatic Retry System** - Exponential backoff (10s → 30s → 1m → 5m → 15m)
+- ✅ **Delivery Logging** - Persistent PostgreSQL storage of all delivery attempts
+- ✅ **Redis Caching** - Fast subscription lookups
+- ✅ **HMAC Signature Verification** - Secure webhook payloads
+- ✅ **Automatic Log Cleanup** - Scheduled cleanup of old delivery logs
+- ✅ **Docker Support** - Easy deployment with Docker Compose
+
+### Frontend Features
+- 🎨 **Subscription Dashboard** - Visual management of webhook subscriptions
+- 📤 **Webhook Sender** - Test webhook delivery with JSON editor
+- 📊 **Delivery Logs Monitor** - Real-time webhook delivery status
+- 🎯 **Modern UI** - Glassmorphism design with gradients
+- 📱 **Responsive Design** - Works on desktop, tablet, and mobile
+- 🔔 **Toast Notifications** - Instant feedback for all actions
+
+---
+
+## 🏗️ Architecture
 
 ```text
-           ┌──────────────────┐
-           │ Webhook Producer │
-           └───────┬──────────┘
-                   │  (1) POST /api/subscriptions
-                   ▼
-        ┌────────────────────────┐
-        │   HookHub Ingestion    │
-        │ (Spring Boot Service)  │
-        └──────────┬─────────────┘
-                   │  (2) Publishes Message
-                   ▼
-           ┌──────────────────┐
-           │   RabbitMQ       │
-           │  (Main Queue +   │
-           │   Retry Queues)  │
-           └────────┬─────────┘
-                    │ (3) Async Consumption
-                    ▼
-           ┌──────────────────┐
-           │ Webhook Worker   │
-           │ Delivers HTTP(s) │
-           └────────┬─────────┘
-                    │
-                    ▼
-           ┌──────────────────┐
-           │ Target Endpoint  │
-           │ (Subscriber App) │
-           └──────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (React)                          │
+│                    http://localhost:5173                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ Subscription │  │   Webhook    │  │   Delivery Logs      │  │
+│  │  Manager     │  │   Sender     │  │   Viewer             │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │ REST API
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Backend (Spring Boot)                          │
+│                    http://localhost:8080                         │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  REST Controllers                                         │  │
+│  │  • /api/webhooks      • /api/subscriptions                │  │
+│  │  • /api/delivery-logs                                     │  │
+│  └───────────────────┬──────────────────────────────────────┘  │
+│                      │                                           │
+│  ┌──────────────────┴────────────┬────────────────────────┐    │
+│  │   Ingestion Service           │  Subscription Service  │    │
+│  │   (Publish to RabbitMQ)       │  (CRUD + Redis Cache)  │    │
+│  └───────────────────────────────┴────────────────────────┘    │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Message Queue (RabbitMQ)                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │  Main Queue  │  │ Retry Queue  │  │   Dead Letter Queue  │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Delivery Worker (Spring Boot)                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  • Consume messages from RabbitMQ                         │  │
+│  │  • Send HTTP POST to subscriber endpoints                │  │
+│  │  • Log delivery attempts to PostgreSQL                   │  │
+│  │  • Retry failed deliveries with backoff                  │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+              ┌────────────────────────┐
+              │   Subscriber Endpoint  │
+              │   (External Service)   │
+              └────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      Data Layer                                  │
+│  ┌──────────────┐  ┌──────────────┐                             │
+│  │  PostgreSQL  │  │    Redis     │                             │
+│  │  (Persistent)│  │   (Cache)    │                             │
+│  └──────────────┘  └──────────────┘                             │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## 🛠️ Tech Stack
-| Component         | Technology             |
-| ----------------- | ---------------------- |
-| Backend Framework | Spring Boot 3          |
-| Messaging         | RabbitMQ               |
-| Database          | PostgreSQL             |
-| Caching           | Redis                  |
-| Build Tool        | Maven                  |
-| Containerization  | Docker, Docker Compose |
 
+### Backend
+| Component         | Technology             | Purpose                        |
+| ----------------- | ---------------------- | ------------------------------ |
+| Framework         | Spring Boot 3          | Core application framework     |
+| Language          | Java 17+               | Programming language           |
+| Messaging         | RabbitMQ 3.13          | Asynchronous message queue     |
+| Database          | PostgreSQL 16          | Persistent data storage        |
+| Cache             | Redis 7                | Subscription lookup cache      |
+| Build Tool        | Maven                  | Dependency & build management  |
+| Containerization  | Docker & Docker Compose| Local development & deployment |
 
-## ⚙️ Project Structure
-```text
-HookHub/
-├── .idea/
-├── README.md
-├── webhook_delivery/
-│   ├── .mvn/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/
-│   │   │   │   └── com.example.webhook_delivery/
-│   │   │   │       ├── config/     # RabbitMQ & RestTemplate configuration
-│   │   │   │       ├── controller/ # REST Controllers (Webhook + Subscription)
-│   │   │   │       ├── dto/        # Data Transfer Objects
-│   │   │   │       ├── entity/     # JPA Entities (Subscription, DeliveryLog)
-│   │   │   │       ├── rabbitmq/   # WebhookMessage DTO
-│   │   │   │       ├── repository/ # JPA Repositories
-│   │   │   │       ├── service/    # Business Logic (WebhookDeliveryWorker, WebhookIngestionService, SubscriptionService, signatureService, LogCleanupService)
-│   │   │   │       └── WebhookDeliveryApplication.java
-│   │   │   └── resources/
-│   │   │       └── application.properties
-│   │   └── test/
-│   └── target/
-└── .gitattributes
+### Frontend
+| Component         | Technology             | Purpose                        |
+| ----------------- | ---------------------- | ------------------------------ |
+| Framework         | React 18               | UI library                     |
+| Language          | TypeScript 5.6         | Type-safe JavaScript           |
+| Build Tool        | Vite 6                 | Fast dev server & bundler      |
+| Styling           | Tailwind CSS 3.4       | Utility-first CSS framework    |
+| HTTP Client       | Axios                  | API communication              |
+| Icons             | Lucide React           | Beautiful icon library         |
+| Notifications     | React Hot Toast        | Toast notifications            |
+
+---
+
+## 📁 Project Structure
+
 ```
-## 🐳 Run Locally with Docker
-### 1️⃣ Clone the Repository
+webhook/
+├── HookHub/                         # Backend (Spring Boot)
+│   ├── docker-compose.yml          # Docker services (PostgreSQL, RabbitMQ, Redis)
+│   ├── start.bat / start.sh        # Quick start scripts
+│   ├── CICD_SETUP.md              # CI/CD deployment guide
+│   ├── README.md                   # Backend-specific documentation
+│   └── webhook_delivery/           # Main Spring Boot application
+│       ├── pom.xml                 # Maven dependencies
+│       ├── Dockerfile              # Container image definition
+│       └── src/
+│           ├── main/
+│           │   ├── java/com/example/webhook_delivery/
+│           │   │   ├── config/            # RabbitMQ, CORS, RestTemplate
+│           │   │   ├── controller/        # REST API endpoints
+│           │   │   ├── dto/               # Data transfer objects
+│           │   │   ├── entity/            # JPA entities
+│           │   │   ├── repository/        # Data access layer
+│           │   │   ├── service/           # Business logic
+│           │   │   └── rabbitmq/          # Message queue models
+│           │   └── resources/
+│           │       └── application.properties
+│           └── test/                      # Unit & integration tests
+│
+└── frontend/                        # Frontend (React + TypeScript)
+    ├── package.json                # Node dependencies
+    ├── vite.config.ts              # Vite configuration
+    ├── tailwind.config.js          # Tailwind CSS config
+    ├── setup.bat                   # Windows setup script
+    ├── README.md                   # Frontend-specific documentation
+    ├── QUICKSTART.md              # Quick start guide
+    └── src/
+        ├── components/             # React components
+        │   ├── SubscriptionManager.tsx
+        │   ├── WebhookSender.tsx
+        │   ├── DeliveryLogs.tsx
+        │   ├── Card.tsx
+        │   └── StatusBadge.tsx
+        ├── services/
+        │   └── api.ts              # Backend API integration
+        ├── types/
+        │   └── index.ts            # TypeScript type definitions
+        ├── App.tsx                 # Main application component
+        └── main.tsx                # Application entry point
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Docker** and **Docker Compose** (for backend dependencies)
+- **Java 17+** and **Maven** (for backend development)
+- **Node.js 18+** and **npm** (for frontend)
+- **Git**
+
+### Option 1: Full Stack Setup (Recommended)
+
+#### 1. Clone the Repository
 ```bash
-git clone https://github.com/Manjeet2001/HookHub.git
+git clone <repository-url>
+cd webhook
+```
+
+#### 2. Start Backend Infrastructure
+```bash
 cd HookHub
-```
-### 2️⃣ Start Dependencies (RabbitMQ, PostgreSQL, Redis)
-```bash
 docker-compose up -d
 ```
 
-### ✅ This starts:
+This starts:
+- PostgreSQL on `localhost:5432`
+- RabbitMQ on `localhost:5672` (Management UI: `localhost:15672`)
+- Redis on `localhost:6379`
 
-RabbitMQ at localhost:5672 (UI at http://localhost:15672
-)
-
-PostgreSQL at localhost:5432
-
-Redis at localhost:6379
-
-### 3️⃣ Configure Application Properties
-
-Edit src/main/resources/application.properties if needed:
+#### 3. Start Backend Application
 ```bash
-# Spring Datasource
-spring.datasource.url=jdbc:postgresql://localhost:5432/hookhub_db
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+cd webhook_delivery
+./mvnw spring-boot:run
 
-# Spring RabbitMQ
-spring.rabbitmq.host=localhost
-spring.rabbitmq.port=5672
-spring.rabbitmq.username=${RABBITMQ_USERNAME:guest}
-spring.rabbitmq.password=${RABBITMQ_PASSWORD:guest}
-spring.rabbitmq.virtual-host=/
-
-# Application-specific queue/exchange names
-app.rabbitmq.exchange=hookhub-exchange
-app.rabbitmq.queue=hookhub-delivery-queue
-app.rabbitmq.routingkey=hookhub-routing-key
-
-# Spring Redis (Caching)
-spring.data.redis.host=localhost
-spring.data.redis.port=6379
-spring.cache.type=redis
-
-# Application Specific Configuration
-app.webhook.max-retries=5
-app.log-retention-hours=72
+# Or on Windows
+mvnw.cmd spring-boot:run
 ```
 
-## 🧠 How It Works
+Backend will be available at `http://localhost:8080`
 
-### 1. A client registers a subscription (eventType + targetURL).
-
-### 2. A producer POSTs a webhook payload to /api/webhooks/{subscriptionId}.
-
-### 3. HookHub queues the message in RabbitMQ.
-
-### 4. The WebhookDeliveryWorker consumes the message asynchronously and POSTs it to the subscriber’s URL.
-
-### 5. If delivery fails (HTTP 5xx or timeout), the message is retried after a delay with exponential backoff.
-
-### 6. All attempts and outcomes are logged in PostgreSQL.
-
-## 🔁 Retry Mechanism
-| Attempt | Queue             | Delay        | Outcome           |
-|---------| ----------------- | ------------ | ----------------- |
-| 1       | Main Queue        | Immediate    | First attempt     |
-| 2       | Retry Queue (10s) | 10 sec later | 1st retry         |
-| 3       | Retry Queue (30s) | 30 sec later | 2nd retry         |
-| 4       | Retry Queue (1m)  | 1 min later  | 3rd retry         |
-| 5       | Retry Queue (5m)  | 5 min later  | 4th retry         |
-| 6       | Retry Queue (15m) | 15 min later | 5th retry         |
-| 7       | —                 | —            | Marked as FAILURE |
-
-### Logs are saved for each attempt in webhook_delivery_log.
-
-## 🧪 API Endpoints
-### 1️⃣ Create a Subscription
-
-### POST /api/subscriptions
-
-Body:
-```json
-{
-  "targetUrl": "https://webhook.site/your-unique-id",
-  "eventType": "user.created",
-  "secret": "your-secret-key(Optional)"
-}
+#### 4. Start Frontend
+```bash
+cd ../../frontend
+npm install
+npm run dev
 ```
-Response:
+
+Frontend will be available at `http://localhost:5173`
+
+#### 5. Open Your Browser
+Navigate to `http://localhost:5173` and start managing webhooks!
+
+### Option 2: Quick Start Scripts
+
+**Windows:**
+```bash
+# Backend
+cd HookHub
+start.bat
+
+# Frontend
+cd frontend
+setup.bat
+```
+
+**Linux/Mac:**
+```bash
+# Backend
+cd HookHub
+./start.sh
+
+# Frontend
+cd frontend
+npm install && npm run dev
+```
+
+---
+
+## 💡 Usage
+
+### Creating a Webhook Subscription
+
+**Via Frontend:**
+1. Navigate to the **Subscriptions** tab
+2. Click **New Subscription**
+3. Fill in:
+   - **Target URL**: Your webhook endpoint (e.g., `https://your-app.com/webhook`)
+   - **Event Type**: Event identifier (e.g., `user.created`, `order.completed`)
+4. Click **Create**
+
+**Via API:**
+```bash
+curl -X POST http://localhost:8080/api/subscriptions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetUrl": "https://your-app.com/webhook",
+    "eventType": "user.created"
+  }'
+```
+
+### Sending a Webhook
+
+**Via Frontend:**
+1. Navigate to the **Send Webhook** tab
+2. Select an **Event Type**
+3. Edit the JSON payload
+4. Click **Send Webhook**
+
+**Via API:**
+```bash
+curl -X POST http://localhost:8080/api/webhooks/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventType": "user.created",
+    "payload": {
+      "userId": "12345",
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  }'
+```
+
+### Monitoring Delivery Status
+
+**Via Frontend:**
+1. Navigate to the **Delivery Logs** tab
+2. View all delivery attempts with:
+   - Status (Success, Failed, Pending)
+   - Target URL
+   - Timestamp
+   - Response details
+
+**Via API:**
+```bash
+curl http://localhost:8080/api/delivery-logs
+```
+
+---
+
+## 📚 API Documentation
+
+### Base URL
+```
+http://localhost:8080/api
+```
+
+### Endpoints
+
+#### Subscriptions
+
+| Method | Endpoint                  | Description                    |
+| ------ | ------------------------- | ------------------------------ |
+| GET    | `/subscriptions`          | Get all subscriptions          |
+| GET    | `/subscriptions/{id}`     | Get subscription by ID         |
+| POST   | `/subscriptions`          | Create new subscription        |
+| DELETE | `/subscriptions/{id}`     | Delete subscription            |
+
+#### Webhooks
+
+| Method | Endpoint                  | Description                    |
+| ------ | ------------------------- | ------------------------------ |
+| POST   | `/webhooks/send`          | Send webhook event             |
+
+#### Delivery Logs
+
+| Method | Endpoint                  | Description                    |
+| ------ | ------------------------- | ------------------------------ |
+| GET    | `/delivery-logs`          | Get all delivery logs          |
+| GET    | `/delivery-logs/{id}`     | Get delivery log by ID         |
+
+### Example Requests
+
+**Create Subscription:**
 ```json
+POST /api/subscriptions
 {
-  "Id": "generated-subscription-id",
-  "targetUrl": "https://webhook.site/your-unique-id",
+  "targetUrl": "https://example.com/webhook",
   "eventType": "user.created"
 }
 ```
 
-## 2️⃣ Send a Webhook Event
-
-### POST /ingest/{subscriptionId}
-Body:
+**Send Webhook:**
 ```json
+POST /api/webhooks/send
 {
   "eventType": "user.created",
-    "payload": {
-        "userId": "12345",
-        "name": "John Doe",
-        "email": "john@example.com"
-    }
+  "payload": {
+    "userId": "123",
+    "email": "test@example.com"
+  }
 }
 ```
-Response:
-```body
-    202 Accepted
-    Webhook Accepted
+
+---
+
+## 🔧 Development
+
+### Backend Development
+
+#### Running Tests
+```bash
+cd HookHub/webhook_delivery
+./mvnw test
 ```
 
-## 3️⃣ Check Delivery Logs
-
-### GET /api/status/subscription/{subscriptionId}
-
-Response Example:
-```json
-[
-  {
-    "id": 107,
-    "deliveryTaskId": "5d4baae3-d782-4bcb-a89c-545e7eca9d25",
-    "subscriptionId": "487e5c15-9626-40a8-862f-8179400c3f22",
-    "targetUrl": "https://webhook.site/cbe094fa-3c92-4ae8-a789-c0a4a441af72",
-    "timestamp": "2025-11-05T10:29:51.512615",
-    "attemptNumber": 4,
-    "outcome": "SUCCESS",
-    "httpStatusCode": 200,
-    "errorDetails": null
-  },
-  {
-    "id": 106,
-    "deliveryTaskId": "5d4baae3-d782-4bcb-a89c-545e7eca9d25",
-    "subscriptionId": "487e5c15-9626-40a8-862f-8179400c3f22",
-    "targetUrl": "https://webhook.site/cbe094fa-3c92-4ae8-a789-c0a4a441af72",
-    "timestamp": "2025-11-05T10:28:48.927651",
-    "attemptNumber": 3,
-    "outcome": "FAILED_ATTEMPT",
-    "httpStatusCode": 500,
-    "errorDetails": "This URL has no default content configured. <a href=\"https://webhook.site/#!/edit/cbe094fa-3c92-4ae8-a789-c0a4a441af72\">Change response in Webhook.site</a>."
-  }
-]
-```
-### GET /api/status/task/{taskId}
-Response Example:
-```json
-[
-  {
-    "id": 102,
-    "deliveryTaskId": "96197c15-713a-4100-bf70-2aeb4b062eb8",
-    "subscriptionId": "487e5c15-9626-40a8-862f-8179400c3f22",
-    "targetUrl": "https://webhook.site/cbe094fa-3c92-4ae8-a789-c0a4a441af72",
-    "timestamp": "2025-11-05T10:07:06.313746",
-    "attemptNumber": 1,
-    "outcome": "SUCCESS",
-    "httpStatusCode": 200,
-    "errorDetails": null
-  }
-]
+#### Building the Application
+```bash
+./mvnw clean package
 ```
 
-## 📊 Database Tables
-### subscription
-| Column     | Type    | Description                      |
-| ---------- | ------- | -------------------------------- |
-| id         | UUID    | Primary key                      |
-| event_type | VARCHAR | Event name (e.g. `user.created`) |
-| target_url | VARCHAR | Target webhook endpoint          |
+#### Running with Docker
+```bash
+cd HookHub/webhook_delivery
+docker build -t hookhub-backend .
+docker run -p 8080:8080 hookhub-backend
+```
 
-### webhook_delivery_log
-| Column           | Type      | Description                        |
-| ---------------- | --------- | ---------------------------------- |
-| id               | BIGINT    | Auto ID                            |
-| delivery_task_id | UUID      | Tracks unique webhook delivery     |
-| subscription_id  | UUID      | FK → subscription                  |
-| target_url      | VARCHAR   | Target webhook endpoint            |
-| timestamp        | TIMESTAMP | Logged at                          |
-| attempt_number   | INT       | Attempt count                      |
-| outcome          | VARCHAR   | SUCCESS / FAILED_ATTEMPT / FAILURE |
-| http_status_code | INT       | Response status                    |
-| error_details    | TEXT      | Error message if any               |
+#### Configuration
+Edit `HookHub/webhook_delivery/src/main/resources/application.properties`:
+
+```properties
+# Database
+spring.datasource.url=jdbc:postgresql://localhost:5432/webhook_db
+spring.datasource.username=postgres
+spring.datasource.password=postgres123
+
+# RabbitMQ
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+
+# Redis
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+```
+
+### Frontend Development
+
+#### Running in Development Mode
+```bash
+cd frontend
+npm run dev
+```
+
+#### Building for Production
+```bash
+npm run build
+```
+
+#### Running Production Build
+```bash
+npm run preview
+```
+
+#### Linting
+```bash
+npm run lint
+```
+
+#### Configuration
+Edit `frontend/src/services/api.ts` to change the backend URL:
+
+```typescript
+const API_BASE_URL = 'http://localhost:8080/api';
+```
+
+---
+
+## 🚢 CI/CD
+
+The project includes GitHub Actions workflow for automated deployment. See [CICD_SETUP.md](HookHub/CICD_SETUP.md) for detailed instructions.
+
+**Features:**
+- Automated builds on push/PR
+- Docker image creation
+- Automated deployment to cloud platforms
+- Environment-based configuration
+
+---
+
+## 🌐 Access Points
+
+Once running, access the following:
+
+| Service                | URL                                  | Credentials        |
+| ---------------------- | ------------------------------------ | ------------------ |
+| Frontend Dashboard     | http://localhost:5173                | -                  |
+| Backend API           | http://localhost:8080                | -                  |
+| RabbitMQ Management   | http://localhost:15672               | guest / guest      |
+| PostgreSQL            | localhost:5432                       | postgres / postgres123 |
+| Redis                 | localhost:6379                       | -                  |
+
+---
+
+## 🔒 Security Features
+
+- **HMAC Signature**: Webhooks are signed with HMAC-SHA256
+- **CORS Configuration**: Properly configured CORS for frontend-backend communication
+- **Input Validation**: Request validation on all API endpoints
+- **Secure Storage**: Sensitive data stored in PostgreSQL with proper constraints
+
+---
+
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 👥 Authors
+
+- Backend: [Manjeet2001](https://github.com/Manjeet2001)
+- Frontend: [maaz1604](https://github.com/maaz1604)
+
+---
+
+## 🙏 Acknowledgments
+
+- Spring Boot team for the excellent framework
+- RabbitMQ for reliable message queuing
+- React team for the powerful UI library
+- All contributors and testers
+
+---
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Authentication & Authorization
+- [ ] Webhook signature validation on subscriber side
+- [ ] Rate limiting
+- [ ] Metrics & monitoring dashboard
+- [ ] GraphQL support
+- [ ] Webhook replay functionality
+- [ ] Custom retry policies per subscription
+- [ ] Multi-tenancy support
+
+---
+
+Made with ❤️ by the HookHub Team
