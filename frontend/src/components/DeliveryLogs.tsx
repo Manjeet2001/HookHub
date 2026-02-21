@@ -67,26 +67,6 @@ const DeliveryLogs: React.FC = () => {
     loadRecentLogs(hours);
   };
 
-  const loadRecentTaskIds = async () => {
-    try {
-      const logs = await statusAPI.getRecent();
-      // Extract unique task IDs
-      const uniqueTasks = new Map<string, string>();
-      logs.forEach(log => {
-        if (!uniqueTasks.has(log.deliveryTaskId)) {
-          uniqueTasks.set(log.deliveryTaskId, log.subscriptionId);
-        }
-      });
-      const taskList = Array.from(uniqueTasks.entries()).map(([id, subId]) => {
-        const sub = subscriptions.find(s => s.id === subId);
-        return { id, eventType: sub?.eventType || 'Unknown' };
-      });
-      setRecentTaskIds(taskList);
-    } catch (error) {
-      console.error('Failed to load recent task IDs:', error);
-    }
-  };
-
   const handleSearch = async () => {
     if (!searchId.trim()) {
       toast.error('Please enter a search ID');

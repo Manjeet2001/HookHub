@@ -102,6 +102,20 @@ services:
       - hookhub-network
     restart: unless-stopped
 
+  # Frontend React Application
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: hookhub-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - hookhub-app
+    networks:
+      - hookhub-network
+    restart: unless-stopped
+
 networks:
   hookhub-network:
     driver: bridge
