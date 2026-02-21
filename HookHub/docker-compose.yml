@@ -100,7 +100,7 @@ services:
       dockerfile: Dockerfile
     container_name: hookhub-frontend
     ports:
-      - "80:80" # Standard HTTP port for users
+      - "80:5173" # Standard HTTP port for users
     depends_on:
       - hookhub-app
     networks:
