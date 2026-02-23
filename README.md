@@ -1,4 +1,4 @@
-# ⚡ HookHub - Complete Webhook Delivery System
+# ⚡ HookHub - Webhook Delivery System
 
 A **production-grade, full-stack webhook subscription and delivery platform** that combines a robust Spring Boot backend with a modern React frontend. HookHub ensures reliable webhook delivery with automatic retries, exponential backoff, persistent logging, and real-time monitoring.
 
@@ -15,9 +15,11 @@ A **production-grade, full-stack webhook subscription and delivery platform** th
 - [Usage](#usage)
 - [API Documentation](#api-documentation)
 - [Development](#development)
+- [Nginx Configuration](#nginx-configuration)
 - [CI/CD](#cicd)
-- [Contributing](#contributing)
-- [License](#license)
+- [Access Points](#access-points)
+- [Security Features](#security-features)
+- [Authors](#authors)
 
 ---
 
@@ -64,7 +66,8 @@ Perfect for applications that need to:
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Frontend (React)                          │
-│                    http://localhost:5173                         │
+│         Local: http://localhost:5173                             │
+│         Production: http://52.88.252.49/                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
 │  │ Subscription │  │   Webhook    │  │   Delivery Logs      │  │
 │  │  Manager     │  │   Sender     │  │   Viewer             │  │
@@ -74,7 +77,8 @@ Perfect for applications that need to:
                           ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                   Backend (Spring Boot)                          │
-│                    http://localhost:8080                         │
+│         Local: http://localhost:8080                             │
+│         Production: http://52.88.252.49:8080                     │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │  REST Controllers                                         │  │
 │  │  • /api/webhooks      • /api/subscriptions                │  │
@@ -137,15 +141,17 @@ Perfect for applications that need to:
 | Containerization  | Docker & Docker Compose| Local development & deployment |
 
 ### Frontend
-| Component         | Technology             | Purpose                        |
-| ----------------- | ---------------------- | ------------------------------ |
-| Framework         | React 18               | UI library                     |
-| Language          | TypeScript 5.6         | Type-safe JavaScript           |
-| Build Tool        | Vite 6                 | Fast dev server & bundler      |
-| Styling           | Tailwind CSS 3.4       | Utility-first CSS framework    |
-| HTTP Client       | Axios                  | API communication              |
-| Icons             | Lucide React           | Beautiful icon library         |
-| Notifications     | React Hot Toast        | Toast notifications            |
+| Component         | Technology             | Purpose                     |
+| ----------------- | ---------------------- |-----------------------------|
+| Framework         | React 18               | UI library                  |
+| Language          | TypeScript 5.6         | Type-safe JavaScript        |
+| Build Tool        | Vite 6                 | Fast dev server & bundler   |
+| Styling           | Tailwind CSS 3.4       | Utility-first CSS framework |
+| HTTP Client       | Axios                  | API communication           |
+| Icons             | Lucide React           | Beautiful icon library      |
+| Notifications     | React Hot Toast        | Toast notifications         |
+| Web Server        | Nginx                  | Static hosting              |
+| Containerization  | Docker                 | Production deployment       |
 
 ---
 
@@ -179,9 +185,12 @@ webhook/
     ├── package.json                # Node dependencies
     ├── vite.config.ts              # Vite configuration
     ├── tailwind.config.js          # Tailwind CSS config
+    ├── Dockerfile                  # Frontend container image
     ├── setup.bat                   # Windows setup script
     ├── README.md                   # Frontend-specific documentation
     ├── QUICKSTART.md              # Quick start guide
+    ├── nginx/
+    │   └── default.conf            # Nginx configuration
     └── src/
         ├── components/             # React components
         │   ├── SubscriptionManager.tsx
@@ -289,7 +298,16 @@ npm install && npm run dev
 
 **Via API:**
 ```bash
+# Local
 curl -X POST http://localhost:8080/api/subscriptions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetUrl": "https://your-app.com/webhook",
+    "eventType": "user.created"
+  }'
+
+# Production (AWS EC2)
+curl -X POST http://52.88.252.49:8080/api/subscriptions \
   -H "Content-Type: application/json" \
   -d '{
     "targetUrl": "https://your-app.com/webhook",
@@ -307,7 +325,20 @@ curl -X POST http://localhost:8080/api/subscriptions \
 
 **Via API:**
 ```bash
+# Local
 curl -X POST http://localhost:8080/api/webhooks/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventType": "user.created",
+    "payload": {
+      "userId": "12345",
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  }'
+
+# Production (AWS EC2)
+curl -X POST http://52.88.252.49:8080/api/webhooks/send \
   -H "Content-Type: application/json" \
   -d '{
     "eventType": "user.created",
@@ -339,8 +370,15 @@ curl http://localhost:8080/api/delivery-logs
 ## 📚 API Documentation
 
 ### Base URL
+
+**Local Development:**
 ```
 http://localhost:8080/api
+```
+
+**Production (AWS EC2):**
+```
+http://52.88.252.49:8080/api
 ```
 
 ### Endpoints
@@ -421,7 +459,7 @@ Edit `HookHub/webhook_delivery/src/main/resources/application.properties`:
 # Database
 spring.datasource.url=jdbc:postgresql://localhost:5432/webhook_db
 spring.datasource.username=postgres
-spring.datasource.password=postgres123
+spring.datasource.password=password
 
 # RabbitMQ
 spring.rabbitmq.host=localhost
@@ -445,16 +483,6 @@ npm run dev
 npm run build
 ```
 
-#### Running Production Build
-```bash
-npm run preview
-```
-
-#### Linting
-```bash
-npm run lint
-```
-
 #### Configuration
 Edit `frontend/src/services/api.ts` to change the backend URL:
 
@@ -464,21 +492,99 @@ const API_BASE_URL = 'http://localhost:8080/api';
 
 ---
 
+## 🌐 Nginx Configuration
+
+The frontend is served using **Nginx** as a static file server for production deployment. This setup provides optimal performance, caching, and proper routing for the React SPA.
+
+### Why Nginx?
+
+- ✅ **High Performance**: Efficiently serves static files (HTML, CSS, JS)
+- ✅ **SPA Routing**: Handles client-side routing with fallback to index.html
+- ✅ **Caching**: Static assets cached for 30 days to reduce server load
+- ✅ **Production Ready**: Battle-tested web server for production environments
+- ✅ **Docker Integration**: Easily containerized for consistent deployment
+
+
+### Frontend Dockerfile
+
+The frontend uses a **multi-stage Docker build** for optimal image size:
+
+**Stage 1: Build** - Uses Node.js to build the React application
+
+**Stage 2: Serve** - Uses Nginx to serve the built static files
+
+### Running Frontend with Nginx
+
+#### Development (Without Nginx)
+```bash
+cd frontend
+npm run dev
+# Runs on http://localhost:5173
+```
+
+#### Production (With Nginx via Docker)
+```bash
+cd frontend
+docker build -t hookhub-frontend .
+docker run -p 80:80 hookhub-frontend
+# Runs on http://localhost:80
+```
+
+### Deployment on AWS EC2
+
+When deployed on EC2, Nginx serves the frontend on port 80:
+
+1. **Build the Docker image** on your EC2 instance
+2. **Run the container** with port mapping
+3. **Access the application** via your EC2 public IP
+
+```bash
+# On EC2 instance
+cd frontend
+docker build -t hookhub-frontend .
+docker run -d -p 80:80 --name hookhub-ui hookhub-frontend
+
+# Access at: http://52.88.252.49/
+```
+
+### Key Features of the Nginx Setup
+
+| Feature                | Configuration                          | Benefit                          |
+| ---------------------- | -------------------------------------- | -------------------------------- |
+| **SPA Routing**        | `try_files $uri /index.html`          | All routes handled by React Router |
+| **Static Caching**     | `expires 30d`                         | Faster load times, reduced bandwidth |
+| **Cache Headers**      | `Cache-Control: public, immutable`    | Browser caching optimization     |
+| **Port 80**            | `listen 80`                           | Standard HTTP port               |
+| **Alpine Base**        | `nginx:alpine`                        | Small image size (~25MB)         |
+
+### Security Considerations
+
+For production environments, consider:
+
+- **HTTPS/SSL**: Use a reverse proxy (like AWS ALB) or configure SSL certificates
+- **Security Headers**: Add headers like `X-Frame-Options`, `X-Content-Type-Options`
+- **Rate Limiting**: Implement Nginx rate limiting for API protection
+- **Firewall Rules**: Configure EC2 security groups to allow only port 80/443
+
+---
+
 ## 🚢 CI/CD
 
-The project includes GitHub Actions workflow for automated deployment. See [CICD_SETUP.md](HookHub/CICD_SETUP.md) for detailed instructions.
+The project includes Jenkins pipeline for automated deployment. See [CICD_SETUP.md](HookHub/CICD_SETUP.md) (Inside Hookhub folder) for detailed instructions.
 
 **Features:**
 - Automated builds on push/PR
 - Docker image creation
-- Automated deployment to cloud platforms
+- Automated deployment to AWS
 - Environment-based configuration
 
 ---
 
 ## 🌐 Access Points
 
-Once running, access the following:
+### Local Development
+
+Once running locally, access the following:
 
 | Service                | URL                                  | Credentials        |
 | ---------------------- | ------------------------------------ | ------------------ |
@@ -487,6 +593,15 @@ Once running, access the following:
 | RabbitMQ Management   | http://localhost:15672               | guest / guest      |
 | PostgreSQL            | localhost:5432                       | postgres / postgres123 |
 | Redis                 | localhost:6379                       | -                  |
+
+### Production (AWS EC2)
+
+Once deployed on EC2, access the following:
+
+| Service                | URL                                  | Credentials        |
+| ---------------------- | ------------------------------------ | ------------------ |
+| Frontend Dashboard     | http://52.88.252.49/                 | -                  |
+| Backend API           | http://52.88.252.49:8080             | -                  |
 
 ---
 
@@ -499,13 +614,6 @@ Once running, access the following:
 
 ---
 
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
 ## 👥 Authors
 
 - Backend: [Manjeet2001](https://github.com/Manjeet2001)
@@ -513,28 +621,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-## 🙏 Acknowledgments
-
-- Spring Boot team for the excellent framework
-- RabbitMQ for reliable message queuing
-- React team for the powerful UI library
-- All contributors and testers
-
----
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Authentication & Authorization
-- [ ] Webhook signature validation on subscriber side
-- [ ] Rate limiting
-- [ ] Metrics & monitoring dashboard
-- [ ] GraphQL support
-- [ ] Webhook replay functionality
-- [ ] Custom retry policies per subscription
-- [ ] Multi-tenancy support
-
----
-
-Made with ❤️ by the HookHub Team
