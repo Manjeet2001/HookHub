@@ -64,6 +64,7 @@ services:
     container_name: hookhub-app
     environment:
       SERVER_PORT: 8080
+      JAVA_OPTS: "-Xmx300m -Xss512k"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/webhook_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres123
@@ -80,8 +81,14 @@ services:
       APP_RABBITMQ_EXCHANGE: hookhub-exchange
       APP_RABBITMQ_QUEUE: hookhub-delivery-queue
       APP_RABBITMQ_ROUTINGKEY: hookhub-routing-key
+
     ports:
       - "8080:8080" # STRICTLY USE 8080 TO AVOID CONFLICT WITH FRONTEND
+    deploy:
+      resources:
+        limits:
+          memory: 400M # Reserve about half the RAM for the Java app
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -106,6 +113,11 @@ services:
     networks:
       - hookhub-network
     restart: unless-stopped
+
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
 networks:
   hookhub-network:
